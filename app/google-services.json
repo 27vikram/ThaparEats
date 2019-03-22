@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "424422275439",
+    "firebase_url": "https://thapareats.firebaseio.com",
+    "project_id": "thapareats",
+    "storage_bucket": "thapareats.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424422275439:android:24a6f2667b574ae1",
+        "android_client_info": {
+          "package_name": "com.example.lenovopc.thapareats"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "424422275439-a4k6ubuq0hg2l1brmobq9kcu6aeoir4b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lenovopc.thapareats",
+            "certificate_hash": "a0fec2a6f01d440ae57f74fa624a073b5adaf69a"
+          }
+        },
+        {
+          "client_id": "424422275439-7cl8uk580m99hc6okb7v4bh52mp8gqov.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMkWzP-zeDM35zOmprf-1KM6I31oTz_eM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "424422275439-7cl8uk580m99hc6okb7v4bh52mp8gqov.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

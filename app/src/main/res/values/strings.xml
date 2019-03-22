@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">ThaparEats</string>
+    <string name="slogan">Order, Eat, Enjoy! </string>
+    <string name="title_activity_home">Home</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+    <string name="forgot_pwd"><u>Forgot Password?</u></string>
+    <string name="facebook_app_id">998819103645701</string>
+    <string name="facebook_login_protocol_name">fb998819103645701</string>
+    <string name="account_kit_client_token">009e8135abafedf5190a7452fb503efe</string>
+    <string-array name="hostelList">
+        <item>Select Hostel</item>
+        <item>A</item>
+        <item>B</item>
+        <item>C</item>
+        <item>E</item>
+        <item>G</item>
+        <item>H</item>
+        <item>I</item>
+        <item>J</item>
+        <item>K</item>
+        <item>L</item>
+        <item>M</item>
+        <item>N</item>
+    </string-array>
+</resources>
