@@ -1,16 +1,15 @@
 package com.example.lenovopc.thapareats;
 
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.graphics.Typeface;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -20,20 +19,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.lenovopc.thapareats.Common.Common;
-import com.example.lenovopc.thapareats.Model.Restaurant;
 import com.example.lenovopc.thapareats.Model.User;
-import com.facebook.FacebookActivity;
-import com.facebook.FacebookSdk;
-import com.facebook.accountkit.Account;
-import com.facebook.accountkit.AccountKit;
-import com.facebook.accountkit.AccountKitCallback;
-import com.facebook.accountkit.AccountKitError;
-import com.facebook.accountkit.AccountKitLoginResult;
-import com.facebook.accountkit.ui.AccountKitActivity;
-import com.facebook.accountkit.ui.AccountKitConfiguration;
-import com.facebook.accountkit.ui.LoginType;
+import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.IdpResponse;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -42,13 +34,12 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
 
 import dmax.dialog.SpotsDialog;
-import io.paperdb.Paper;
 import uk.co.chrisjenx.calligraphy.CalligraphyConfig;
 import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
-
-import static com.facebook.accountkit.AccountKitLoginResult.RESULT_KEY;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -56,8 +47,26 @@ public class MainActivity extends AppCompatActivity {
     Button btnContinue;
     TextView txtSlogan;
 
+    private FirebaseAuth firebaseAuth;
+    private FirebaseAuth.AuthStateListener listener;
+    private List<AuthUI.IdpConfig> providers;
+
     FirebaseDatabase database;
     DatabaseReference users;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        firebaseAuth.addAuthStateListener(listener);
+    }
+
+    @Override
+    protected void onStop() {
+        if(listener!=null)
+            firebaseAuth.removeAuthStateListener(listener);
+        super.onStop();
+    }
+
     @Override
     protected void attachBaseContext(Context newBase) {
         super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
@@ -66,18 +75,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        FacebookSdk.sdkInitialize(getApplicationContext());
-        AccountKit.initialize(this);
         CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
                 .setDefaultFontPath("fonts/FallingSky.otf")
                 .setFontAttrId(R.attr.fontPath)
                 .build());
 
+        firebaseAuth = FirebaseAuth.getInstance();
+        providers = Arrays.asList(new AuthUI.IdpConfig.PhoneBuilder().build());
+        listener = firebaseAuth ->{
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user!=null)
+                checkUserFromFirebase(user);
+        };
+
         setContentView(R.layout.activity_main);
 
         btnContinue = (Button)findViewById(R.id.btn_continue);
 
-        printKeyHash();
         database = FirebaseDatabase.getInstance();
         users = database.getReference("User");
         txtSlogan = (TextView)findViewById(R.id.txtSlogan);
@@ -92,163 +106,98 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if (AccountKit.getCurrentAccessToken()!=null){
-            final AlertDialog waitingDialog = new SpotsDialog.Builder().setContext(this).build();
-            waitingDialog.show();
-            waitingDialog.setMessage("Please Wait");
-            waitingDialog.setCancelable(false);
+    }
 
-            AccountKit.getCurrentAccount(new AccountKitCallback<Account>() {
-                @Override
-                public void onSuccess(Account account) {
-                    users.child(account.getPhoneNumber().toString())
-                            .addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(DataSnapshot dataSnapshot) {
-                                    User localUser = dataSnapshot.getValue(User.class);
-                                    Intent homeIntent = new Intent(MainActivity.this, RestaurantList.class);
-                                    Common.currentUser = localUser;
-                                    startActivity(homeIntent);
-                                    waitingDialog.dismiss();
-                                    finish();
-                                }
+    private void checkUserFromFirebase(FirebaseUser user) {
+        final AlertDialog waitingDialog = new SpotsDialog.Builder().setContext(this).build();
+        waitingDialog.show();
+        waitingDialog.setMessage("Please Wait");
+        waitingDialog.setCancelable(false);
 
-                                @Override
-                                public void onCancelled(DatabaseError databaseError) {
+        users.orderByKey().equalTo(user.getPhoneNumber())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        if (!dataSnapshot.child(user.getPhoneNumber()).exists()){
+                            User newUser = new User();
+                            newUser.setPhone(user.getPhoneNumber());
+                            newUser.setName("");
 
-                                }
-                            });
-                }
+                            users.child(user.getPhoneNumber())
+                                    .setValue(newUser)
+                                    .addOnCompleteListener(task -> {
+                                        if (task.isSuccessful())
+                                            Toast.makeText(MainActivity.this, "User Registered Successfully", Toast.LENGTH_SHORT).show();
 
-                @Override
-                public void onError(AccountKitError accountKitError) {
+                                        users.child(user.getPhoneNumber())
+                                                .addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot1) {
+                                                        User localUser = dataSnapshot1.getValue(User.class);
+                                                        Intent homeIntent = new Intent(MainActivity.this, RestaurantList.class);
+                                                        Common.currentUser = localUser;
+                                                        startActivity(homeIntent);
+                                                        waitingDialog.dismiss();
+                                                        finish();
+                                                    }
 
-                }
-            });
-        }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError databaseError) {
+                                                        waitingDialog.dismiss();
+                                                        Toast.makeText(MainActivity.this, ""+databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+                                                    }
+                                                });
+                                    });
+                        }
+                        else {
+                            users.child(user.getPhoneNumber())
+                                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                                        @Override
+                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                            User localUser = dataSnapshot.getValue(User.class);
+                                            Intent homeIntent = new Intent(MainActivity.this, RestaurantList.class);
+                                            Common.currentUser = localUser;
+                                            startActivity(homeIntent);
+                                            waitingDialog.dismiss();
+                                            finish();
+                                        }
+
+                                        @Override
+                                        public void onCancelled(DatabaseError databaseError) {
+                                            waitingDialog.dismiss();
+                                            Toast.makeText(MainActivity.this, ""+databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        waitingDialog.dismiss();
+                        Toast.makeText(MainActivity.this, ""+databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void startLoginSystem() {
-        Intent intent = new Intent(MainActivity.this, AccountKitActivity.class);
-        AccountKitConfiguration.AccountKitConfigurationBuilder configurationBuilder =
-                new AccountKitConfiguration.AccountKitConfigurationBuilder(LoginType.PHONE,
-                        AccountKitActivity.ResponseType.TOKEN);
-        intent.putExtra(AccountKitActivity.ACCOUNT_KIT_ACTIVITY_CONFIGURATION,configurationBuilder.build());
-        startActivityForResult(intent,REQUEST_CODE);
+
+        startActivityForResult(AuthUI.getInstance()
+                .createSignInIntentBuilder()
+                .setAvailableProviders(providers)
+                .build(),REQUEST_CODE);
     }
 
-    private void printKeyHash() {
-        try {
-            PackageInfo packageInfo = getPackageManager().getPackageInfo("com.example.lenovopc.thapareats",
-                    PackageManager.GET_SIGNATURES);
-            for (Signature signature:packageInfo.signatures){
-                MessageDigest md = MessageDigest.getInstance("SHA");
-                md.update(signature.toByteArray());
-                Log.d("KeyHash", Base64.encodeToString(md.digest(),Base64.DEFAULT));
-            }
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable final Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE){
-            AccountKitLoginResult result = data.getParcelableExtra(AccountKitLoginResult.RESULT_KEY);
-            if (result.getError()!=null){
-                Toast.makeText(this, ""+result.getError().getErrorType().getMessage(), Toast.LENGTH_SHORT).show();
-                return;
+            IdpResponse response = IdpResponse.fromResultIntent(data);
+            if (resultCode == RESULT_OK){
+                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             }
-            else if (result.wasCancelled()){
-                Toast.makeText(this, "Cancel", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            else{
-                if (result.getAccessToken()!=null){
-                    final AlertDialog waitingDialog = new SpotsDialog.Builder().setContext(this).build();
-                    waitingDialog.show();
-                    waitingDialog.setMessage("Please Wait");
-                    waitingDialog.setCancelable(false);
-
-                    AccountKit.getCurrentAccount(new AccountKitCallback<Account>() {
-                        @Override
-                        public void onSuccess(Account account) {
-                            final String userPhone = account.getPhoneNumber().toString();
-                            users.orderByKey().equalTo(userPhone)
-                                    .addListenerForSingleValueEvent(new ValueEventListener() {
-                                        @Override
-                                        public void onDataChange(DataSnapshot dataSnapshot) {
-                                            if (!dataSnapshot.child(userPhone).exists()){
-                                                User newUser = new User();
-                                                newUser.setPhone(userPhone);
-                                                newUser.setName("");
-
-                                                users.child(userPhone)
-                                                        .setValue(newUser)
-                                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                            @Override
-                                                            public void onComplete(@NonNull Task<Void> task) {
-                                                                if (task.isSuccessful())
-                                                                    Toast.makeText(MainActivity.this, "User Registered Successfully", Toast.LENGTH_SHORT).show();
-
-                                                                users.child(userPhone)
-                                                                        .addListenerForSingleValueEvent(new ValueEventListener() {
-                                                                            @Override
-                                                                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                                                                User localUser = dataSnapshot.getValue(User.class);
-                                                                                Intent homeIntent = new Intent(MainActivity.this, RestaurantList.class);
-                                                                                Common.currentUser = localUser;
-                                                                                startActivity(homeIntent);
-                                                                                waitingDialog.dismiss();
-                                                                                finish();
-                                                                            }
-
-                                                                            @Override
-                                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                                            }
-                                                                        });
-                                                            }
-                                                        });
-                                            }
-                                            else {
-                                                users.child(userPhone)
-                                                        .addListenerForSingleValueEvent(new ValueEventListener() {
-                                                            @Override
-                                                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                                                User localUser = dataSnapshot.getValue(User.class);
-                                                                Intent homeIntent = new Intent(MainActivity.this, RestaurantList.class);
-                                                                Common.currentUser = localUser;
-                                                                startActivity(homeIntent);
-                                                                waitingDialog.dismiss();
-                                                                finish();
-                                                            }
-
-                                                            @Override
-                                                            public void onCancelled(DatabaseError databaseError) {
-
-                                                            }
-                                                        });
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onCancelled(DatabaseError databaseError) {
-
-                                        }
-                                    });
-                        }
-
-                        @Override
-                        public void onError(AccountKitError accountKitError) {
-                            Toast.makeText(MainActivity.this, ""+accountKitError.getErrorType().getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            }
+            else
+                Toast.makeText(this, "Failed to sign in", Toast.LENGTH_SHORT).show();
         }
     }
 }

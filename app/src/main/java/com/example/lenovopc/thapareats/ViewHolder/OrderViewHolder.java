@@ -1,12 +1,11 @@
 package com.example.lenovopc.thapareats.ViewHolder;
 
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.lenovopc.thapareats.Interface.ItemClickListener;
 import com.example.lenovopc.thapareats.R;
 
 public class OrderViewHolder extends RecyclerView.ViewHolder  {

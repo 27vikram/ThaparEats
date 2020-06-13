@@ -1,22 +1,16 @@
 package com.example.lenovopc.thapareats.ViewHolder;
 
-import android.content.Context;
-import android.graphics.Color;
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
-import android.view.ContextMenu;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
-import com.amulyakhare.textdrawable.TextDrawable;
 import com.cepheuen.elegantnumberbutton.view.ElegantNumberButton;
 import com.example.lenovopc.thapareats.Cart;
 import com.example.lenovopc.thapareats.Common.Common;
 import com.example.lenovopc.thapareats.Database.Database;
-import com.example.lenovopc.thapareats.Interface.ItemClickListener;
 import com.example.lenovopc.thapareats.Model.Order;
 import com.example.lenovopc.thapareats.R;
 import com.squareup.picasso.Picasso;
